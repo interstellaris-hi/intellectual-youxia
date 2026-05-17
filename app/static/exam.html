@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智识游侠 · 考试中心</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans SC', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 20s ease infinite;
+            color: #fff;
+            min-height: 100vh;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+        }
+        .step-btn {
+            transition: all 0.3s ease;
+        }
+        .step-btn.active {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: rgba(139, 92, 246, 0.5);
+            color: #d8b4fe;
+        }
+        .question-card {
+            transition: all 0.3s ease;
+        }
+        .question-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .correct { border-color: rgba(34, 197, 94, 0.5); background: rgba(34, 197, 94, 0.1); }
+        .wrong { border-color: rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.1); }
+        .blob {
+            position: absolute;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.4;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #7c3aed; }
+        .blob-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #db2777; }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="relative min-h-screen">
+    <div class="blob blob-1 rounded-full"></div>
+    <div class="blob blob-2 rounded-full"></div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="glass-panel rounded-2xl p-6 mb-6">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-500 to-rose-600">
+                        <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold">智识游侠 · 考试中心</h1>
+                        <p class="text-sm text-slate-300">上传文件 → 提取重难点 → 生成考题 → 智能批改</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="window.location.href='/admin/'" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all">
+                        <i class="fa-solid fa-home mr-2"></i>返回主页
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Steps -->
+        <div class="glass-panel rounded-2xl p-6">
+            <div class="flex flex-wrap gap-2 mb-6 border-b border-white/10 pb-4">
+                <button onclick="switchTab('step1')" id="tab-step1" class="step-btn active px-4 py-2 rounded-lg text-sm font-medium border border-white/10">
+                    <i class="fa-solid fa-1 mr-1"></i> 选择教材
+                </button>
+                <button onclick="switchTab('step2')" id="tab-step2" class="step-btn px-4 py-2 rounded-lg text-sm font-medium border border-white/10">
+                    <i class="fa-solid fa-2 mr-1"></i> 分析重难点
+                </button>
+                <button onclick="switchTab('step3')" id="tab-step3" class="step-btn px-4 py-2 rounded-lg text-sm font-medium border border-white/10">
+                    <i class="fa-solid fa-3 mr-1"></i> 生成考题
+                </button>
+                <button onclick="switchTab('step4')" id="tab-step4" class="step-btn px-4 py-2 rounded-lg text-sm font-medium border border-white/10">
+                    <i class="fa-solid fa-4 mr-1"></i> 答题批改
+                </button>
+            </div>
+
+            <!-- Step 1: Select File -->
+            <div id="step1" class="step-content">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fa-solid fa-book mr-2 text-violet-400"></i> 选择教材文件
+                </h2>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="glass-panel p-4 rounded-xl">
+                        <label class="text-sm text-slate-400 mb-2 block">已入库的教材文件</label>
+                        <select id="fileSelect" class="w-full glass-input rounded-lg p-3 text-sm">
+                            <option value="">请选择教材...</option>
+                        </select>
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl flex items-center justify-center">
+                        <button onclick="loadFiles()" class="text-violet-400 hover:text-violet-300">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>刷新列表
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="goToStep2()" class="btn-primary px-6 py-2.5 rounded-lg font-medium">
+                        下一步 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Analyze -->
+            <div id="step2" class="step-content hidden">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fa-solid fa-microscope mr-2 text-violet-400"></i> 提取重难点
+                </h2>
+                <div class="flex items-center gap-4 mb-4">
+                    <button onclick="analyzeFile()" id="analyzeBtn" class="btn-primary px-6 py-2.5 rounded-lg font-medium">
+                        <i class="fa-solid fa-rocket mr-2"></i>开始分析
+                    </button>
+                    <span id="analyzeStatus" class="text-sm text-slate-400"></span>
+                </div>
+                <div id="analysisResult" class="hidden glass-panel p-5 rounded-xl">
+                    <h3 class="font-semibold text-violet-300 mb-4">📚 重难点分析结果</h3>
+                    <div id="analysisContent" class="prose prose-invert prose-sm max-w-none"></div>
+                </div>
+                <div class="mt-6 flex justify-between">
+                    <button onclick="switchTab('step1')" class="px-6 py-2.5 rounded-lg border border-white/10 hover:bg-white/5">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>上一步
+                    </button>
+                    <button onclick="goToStep3()" class="btn-primary px-6 py-2.5 rounded-lg font-medium">
+                        下一步 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Generate -->
+            <div id="step3" class="step-content hidden">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fa-solid fa-pen-to-square mr-2 text-violet-400"></i> 生成考题
+                </h2>
+                <div class="grid md:grid-cols-3 gap-4 mb-6">
+                    <div class="glass-panel p-4 rounded-xl">
+                        <label class="text-sm text-slate-400 mb-2 block">题目数量</label>
+                        <select id="questionCount" class="w-full glass-input rounded-lg p-3 text-sm">
+                            <option value="3">3 道题</option>
+                            <option value="5" selected>5 道题</option>
+                            <option value="10">10 道题</option>
+                        </select>
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl">
+                        <label class="text-sm text-slate-400 mb-2 block">难度等级</label>
+                        <select id="difficulty" class="w-full glass-input rounded-lg p-3 text-sm">
+                            <option value="easy">简单</option>
+                            <option value="medium" selected>中等</option>
+                            <option value="hard">困难</option>
+                        </select>
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl flex items-center justify-center">
+                        <button onclick="generateExam()" id="generateBtn" class="btn-primary px-6 py-2.5 rounded-lg font-medium">
+                            <i class="fa-solid fa-magic mr-2"></i>生成考题
+                        </button>
+                    </div>
+                </div>
+                <div id="examResult" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-violet-300">📝 生成的考题</h3>
+                        <button onclick="showAnswerKey()" class="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 text-sm">
+                            <i class="fa-solid fa-key mr-2"></i>查看答案
+                        </button>
+                    </div>
+                    <div id="questionsList" class="space-y-4"></div>
+                </div>
+                <!-- 答案核对界面 -->
+                <div id="answerKeySection" class="hidden mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-amber-400">🔑 参考答案</h3>
+                        <button onclick="hideAnswerKey()" class="text-slate-400 hover:text-white text-sm">
+                            <i class="fa-solid fa-times mr-1"></i>关闭
+                        </button>
+                    </div>
+                    <div id="answerKeyList" class="space-y-4"></div>
+                </div>
+                <div class="mt-6 flex justify-between">
+                    <button onclick="switchTab('step2')" class="px-6 py-2.5 rounded-lg border border-white/10 hover:bg-white/5">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>上一步
+                    </button>
+                    <button onclick="goToStep4()" class="btn-primary px-6 py-2.5 rounded-lg font-medium">
+                        下一步 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Answer & Grade -->
+            <div id="step4" class="step-content hidden">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fa-solid fa-check-double mr-2 text-violet-400"></i> 答题与批改
+                </h2>
+                <div id="answerSection">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-slate-400 text-sm">请完成上一步生成的考题，然后提交答案</p>
+                        <button onclick="showAnswerKeyBeforeSubmit()" class="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 text-sm">
+                            <i class="fa-solid fa-eye mr-2"></i>预览答案
+                        </button>
+                    </div>
+                    <div id="answerSaveStatus" class="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 hidden">
+                        <i class="fa-solid fa-check-circle mr-2"></i><span id="saveStatusText">已保存 0/0 题</span>
+                    </div>
+                    <div id="answerQuestionsList" class="space-y-4"></div>
+                    <div class="flex flex-wrap gap-3 mt-6">
+                        <button onclick="saveAnswers()" id="saveBtn" class="px-6 py-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 font-medium">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i>保存答案
+                        </button>
+                        <button onclick="submitGrading()" id="gradeBtn" class="btn-primary px-6 py-2.5 rounded-lg font-medium" disabled>
+                            <i class="fa-solid fa-check-double mr-2"></i>提交批改
+                        </button>
+                    </div>
+                </div>
+                <div id="gradingSection" class="hidden mt-8">
+                    <h3 class="font-semibold text-violet-300 mb-4">📊 批改结果</h3>
+                    <div id="gradingResult" class="glass-panel p-5 rounded-xl"></div>
+                    <div class="flex flex-wrap gap-3 mt-6">
+                        <button onclick="showAnswerKeyFromGrading()" class="px-6 py-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30">
+                            <i class="fa-solid fa-key mr-2"></i>查看全部答案
+                        </button>
+                        <button onclick="showExplanations()" id="explainBtn" class="px-6 py-2.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-400 hover:bg-violet-500/30">
+                            <i class="fa-solid fa-graduation-cap mr-2"></i>查看解析
+                        </button>
+                        <button onclick="resetExam()" class="px-6 py-2.5 rounded-lg border border-white/10 hover:bg-white/5">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>重新答题
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button onclick="switchTab('step3')" class="px-6 py-2.5 rounded-lg border border-white/10 hover:bg-white/5">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>返回生成考题
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center py-6 text-slate-500 text-sm">
+            <p>考试中心 | 访问地址: http://127.0.0.1:8001/exam</p>
+        </footer>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="glass-panel text-white px-5 py-3 rounded-xl flex items-center border-l-4 border-emerald-500">
+            <span id="toastMsg">操作成功</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1/admin';
+        let selectedFile = null;
+        let analysisData = null;
+        let generatedQuestions = [];
+        let savedAnswers = [];
+        let sessionId = 'exam_' + Date.now();
+        let gradingResult = null;
+
+        function switchTab(step) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(step).classList.remove('hidden');
+            document.querySelectorAll('.step-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + step).classList.add('active');
+        }
+
+        async function loadFiles() {
+            try {
+                const res = await fetch(`${API_BASE}/files`);
+                const data = await res.json();
+                const select = document.getElementById('fileSelect');
+                select.innerHTML = '<option value="">请选择教材...</option>';
+                data.files.filter(f => f.is_ingested).forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify({filename: f.name, lecture_id: f.suggested_namespace});
+                    opt.textContent = `📚 ${f.name}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                showToast('加载失败', 'error');
+            }
+        }
+
+        function goToStep2() {
+            const select = document.getElementById('fileSelect');
+            if (!select.value) return showToast('请先选择教材', 'warning');
+            selectedFile = JSON.parse(select.value);
+            switchTab('step2');
+        }
+
+        async function analyzeFile() {
+            if (!selectedFile) return showToast('请先选择教材', 'warning');
+            const btn = document.getElementById('analyzeBtn');
+            const status = document.getElementById('analyzeStatus');
+            const resultDiv = document.getElementById('analysisResult');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            status.innerHTML = '<i class="fa-solid fa-spinner spinner mr-1"></i> 分析中...';
+            try {
+                console.log('Analyzing file:', {filename: selectedFile.filename, lecture_id: selectedFile.lecture_id});
+                const res = await fetch(`${API_BASE}/exam/analyze`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filename: selectedFile.filename, lecture_id: selectedFile.lecture_id, difficulty: 'medium'})
+                });
+                const data = await res.json();
+                console.log('Analysis response:', data);
+                if (data.status === 'success') {
+                    if (data.analysis?.error) {
+                        showToast('分析失败：' + data.analysis.error, 'error');
+                    } else {
+                        analysisData = data.analysis;
+                        renderAnalysis(data.analysis);
+                        resultDiv.classList.remove('hidden');
+                        showToast('分析完成', 'success');
+                    }
+                } else {
+                    showToast('分析失败: ' + (data.detail || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showToast('错误: ' + e.message, 'error');
+                console.error('Exception:', e);
+            }
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            status.innerHTML = '';
+        }
+
+        function renderAnalysis(analysis) {
+            const container = document.getElementById('analysisContent');
+            let html = '';
+            if (analysis.chapters?.length) {
+                html += '<div class="mb-4"><h4 class="font-semibold text-violet-300 mb-2">📖 章节结构</h4>';
+                analysis.chapters.forEach(ch => {
+                    const color = ch.difficulty === 'high' ? 'text-red-400' : ch.difficulty === 'medium' ? 'text-yellow-400' : 'text-green-400';
+                    html += `<div class="glass-panel p-3 rounded-lg mb-2"><div class="font-medium">${ch.title}</div><div class="text-sm text-slate-400">${ch.key_points?.join('、')}</div><div class="text-xs ${color}">难度：${ch.difficulty === 'high' ? '高' : ch.difficulty === 'medium' ? '中' : '低'}</div></div>`;
+                });
+                html += '</div>';
+            }
+            if (analysis.important_concepts?.length) {
+                html += '<div class="mb-4"><h4 class="font-semibold text-violet-300 mb-2">💡 重要概念</h4>';
+                analysis.important_concepts.forEach(c => {
+                    const color = c.importance === 'high' ? 'text-red-400' : c.importance === 'medium' ? 'text-yellow-400' : 'text-green-400';
+                    html += `<div class="glass-panel p-3 rounded-lg mb-2"><div class="font-medium">${c.term}</div><div class="text-sm text-slate-400">${c.definition}</div><div class="text-xs ${color}">重要程度：${c.importance === 'high' ? '高' : c.importance === 'medium' ? '中' : '低'}</div></div>`;
+                });
+                html += '</div>';
+            }
+            if (analysis.summary) html += `<div class="glass-panel p-3 rounded-lg"><h4 class="font-semibold text-violet-300 mb-2">📝 总结</h4><p class="text-sm text-slate-300">${analysis.summary}</p></div>`;
+            container.innerHTML = html || '暂无分析数据';
+        }
+
+        function goToStep3() {
+            switchTab('step3');
+        }
+
+        async function generateExam() {
+            if (!selectedFile) return showToast('请先选择教材', 'warning');
+            const btn = document.getElementById('generateBtn');
+            const count = document.getElementById('questionCount').value;
+            const difficulty = document.getElementById('difficulty').value;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner spinner mr-2"></i> 生成中...';
+            try {
+                console.log('Generating exam with:', {filename: selectedFile.filename, lecture_id: selectedFile.lecture_id, difficulty, question_count: parseInt(count)});
+                const res = await fetch(`${API_BASE}/exam/generate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filename: selectedFile.filename, lecture_id: selectedFile.lecture_id, difficulty, question_count: parseInt(count)})
+                });
+                const data = await res.json();
+                console.log('Response:', data);
+                if (data.status === 'success') {
+                    if (!data.questions || data.questions.length === 0) {
+                        showToast('生成失败：题目为空', 'error');
+                    } else if (data.questions[0]?.error) {
+                        showToast('生成失败：' + data.questions[0].error, 'error');
+                        console.error('Error in questions:', data.questions[0]);
+                    } else {
+                        generatedQuestions = data.questions;
+                        renderQuestions(data.questions);
+                        document.getElementById('examResult').classList.remove('hidden');
+                        showToast('生成完成', 'success');
+                    }
+                } else {
+                    showToast('生成失败: ' + (data.detail || '未知错误'), 'error');
+                    console.error('Error response:', data);
+                }
+            } catch (e) {
+                showToast('错误: ' + e.message, 'error');
+                console.error('Exception:', e);
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-magic mr-2"></i> 重新生成';
+        }
+
+        function renderQuestions(questions) {
+            const container = document.getElementById('questionsList');
+            const answerContainer = document.getElementById('answerQuestionsList');
+            container.innerHTML = '';
+            answerContainer.innerHTML = '';
+            questions.forEach((q, idx) => {
+                let qHtml = `<div class="font-medium mb-2">${idx + 1}. ${q.question}</div>`;
+                if (q.type === 'choice' && q.options) qHtml += `<div class="ml-4 text-sm text-slate-300">${q.options.join('<br>')}</div>`;
+                qHtml += `<div class="text-xs text-yellow-400 mt-2"><i class="fa-solid fa-lock mr-1"></i>答案将在提交后显示</div>`;
+                container.innerHTML += `<div class="glass-panel p-4 rounded-xl question-card">${qHtml}</div>`;
+
+                let aHtml = `<div class="glass-panel p-4 rounded-xl question-card"><div class="font-medium mb-2">${idx + 1}. ${q.question}</div>`;
+                if (q.type === 'choice' && q.options) {
+                    aHtml += '<div class="space-y-2 ml-4">';
+                    q.options.forEach((opt, oi) => {
+                        aHtml += `<label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q${idx}" value="${String.fromCharCode(65 + oi)}"><span class="text-sm">${opt}</span></label>`;
+                    });
+                    aHtml += '</div>';
+                } else {
+                    aHtml += `<textarea name="q${idx}" class="w-full glass-input rounded-lg p-3 text-sm mt-2" rows="3" placeholder="请输入答案..."></textarea>`;
+                }
+                aHtml += '</div>';
+                answerContainer.innerHTML += aHtml;
+            });
+        }
+
+        function renderQuestionsWithAnswer(questions) {
+            const container = document.getElementById('questionsList');
+            container.innerHTML = '';
+            questions.forEach((q, idx) => {
+                let qHtml = `<div class="font-medium mb-2">${idx + 1}. ${q.question}</div>`;
+                if (q.type === 'choice' && q.options) qHtml += `<div class="ml-4 text-sm text-slate-300">${q.options.join('<br>')}</div>`;
+                qHtml += `<div class="text-xs text-green-400 mt-2"><i class="fa-solid fa-check-circle mr-1"></i>答案：${q.answer}</div>`;
+                if (q.analysis) qHtml += `<div class="text-xs text-blue-400 mt-1"><i class="fa-solid fa-lightbulb mr-1"></i>解析：${q.analysis}</div>`;
+                container.innerHTML += `<div class="glass-panel p-4 rounded-xl question-card correct">${qHtml}</div>`;
+            });
+        }
+
+        function showAnswerKey() {
+            if (!generatedQuestions.length) return showToast('请先生成考题', 'warning');
+            const container = document.getElementById('answerKeyList');
+            container.innerHTML = '';
+            generatedQuestions.forEach((q, idx) => {
+                const typeLabel = q.type === 'choice' ? '选择题' : q.type === 'short' ? '简答题' : '论述题';
+                let html = `<div class="glass-panel p-4 rounded-xl border-l-4 border-amber-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-medium">${idx + 1}. ${q.question}</div>
+                        <span class="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded">${typeLabel}</span>
+                    </div>`;
+                if (q.type === 'choice' && q.options) {
+                    html += `<div class="text-sm text-slate-400 mb-2">${q.options.join('<br>')}</div>`;
+                }
+                html += `<div class="text-green-400 font-semibold mt-2"><i class="fa-solid fa-key mr-1"></i>正确答案：${q.answer}</div>`;
+                if (q.analysis) html += `<div class="text-blue-400 text-sm mt-1"><i class="fa-solid fa-lightbulb mr-1"></i>解题思路：${q.analysis}</div>`;
+                if (q.points) html += `<div class="text-yellow-400 text-sm mt-1"><i class="fa-solid fa-star mr-1"></i>分值：${q.points}分</div>`;
+                html += '</div>';
+                container.innerHTML += html;
+            });
+            document.getElementById('answerKeySection').classList.remove('hidden');
+            document.getElementById('examResult').classList.add('hidden');
+        }
+
+        function showAnswerKeyFromGrading() {
+            if (!generatedQuestions.length) return showToast('没有考题数据', 'warning');
+            const container = document.getElementById('answerKeyList');
+            container.innerHTML = '';
+            generatedQuestions.forEach((q, idx) => {
+                const typeLabel = q.type === 'choice' ? '选择题' : q.type === 'short' ? '简答题' : '论述题';
+                let html = `<div class="glass-panel p-4 rounded-xl border-l-4 border-amber-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-medium">${idx + 1}. ${q.question}</div>
+                        <span class="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded">${typeLabel}</span>
+                    </div>`;
+                if (q.type === 'choice' && q.options) {
+                    html += `<div class="text-sm text-slate-400 mb-2">${q.options.join('<br>')}</div>`;
+                }
+                html += `<div class="text-green-400 font-semibold mt-2"><i class="fa-solid fa-key mr-1"></i>正确答案：${q.answer}</div>`;
+                if (q.analysis) html += `<div class="text-blue-400 text-sm mt-1"><i class="fa-solid fa-lightbulb mr-1"></i>解题思路：${q.analysis}</div>`;
+                if (q.points) html += `<div class="text-yellow-400 text-sm mt-1"><i class="fa-solid fa-star mr-1"></i>分值：${q.points}分</div>`;
+                html += '</div>';
+                container.innerHTML += html;
+            });
+            document.getElementById('answerKeySection').classList.remove('hidden');
+            document.getElementById('gradingSection').classList.add('hidden');
+            document.getElementById('answerSection').classList.add('hidden');
+            document.getElementById('examResult').classList.add('hidden');
+        }
+
+        function hideAnswerKey() {
+            document.getElementById('answerKeySection').classList.add('hidden');
+            const hasGrading = !document.getElementById('gradingSection').classList.contains('hidden');
+            if (hasGrading) {
+                document.getElementById('gradingSection').classList.remove('hidden');
+            } else if (document.getElementById('answerSection').classList.contains('hidden') === false) {
+                document.getElementById('answerSection').classList.remove('hidden');
+            } else {
+                document.getElementById('examResult').classList.remove('hidden');
+            }
+        }
+
+        function showAnswerKeyBeforeSubmit() {
+            if (!generatedQuestions.length) return showToast('请先生成考题', 'warning');
+            const container = document.getElementById('answerKeyList');
+            container.innerHTML = '';
+            generatedQuestions.forEach((q, idx) => {
+                const typeLabel = q.type === 'choice' ? '选择题' : q.type === 'short' ? '简答题' : '论述题';
+                let html = `<div class="glass-panel p-4 rounded-xl border-l-4 border-amber-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-medium">${idx + 1}. ${q.question}</div>
+                        <span class="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded">${typeLabel}</span>
+                    </div>`;
+                if (q.type === 'choice' && q.options) {
+                    html += `<div class="text-sm text-slate-400 mb-2">${q.options.join('<br>')}</div>`;
+                }
+                html += `<div class="text-green-400 font-semibold mt-2"><i class="fa-solid fa-key mr-1"></i>正确答案：${q.answer}</div>`;
+                if (q.analysis) html += `<div class="text-blue-400 text-sm mt-1"><i class="fa-solid fa-lightbulb mr-1"></i>解题思路：${q.analysis}</div>`;
+                html += '</div>';
+                container.innerHTML += html;
+            });
+            document.getElementById('answerKeySection').classList.remove('hidden');
+            document.getElementById('answerSection').classList.add('hidden');
+        }
+
+        function goToStep4() {
+            if (!generatedQuestions.length) return showToast('请先生成考题', 'warning');
+            switchTab('step4');
+            document.getElementById('gradingSection').classList.add('hidden');
+            document.getElementById('answerSection').classList.remove('hidden');
+            loadSavedAnswers();
+        }
+
+        async function loadSavedAnswers() {
+            try {
+                const res = await fetch(`${API_BASE}/get-answers/${sessionId}`);
+                const data = await res.json();
+                if (data.found && data.answers) {
+                    savedAnswers = data.answers;
+                    renderAnswerWithSaved(savedAnswers);
+                    document.getElementById('answerSaveStatus').classList.remove('hidden');
+                    document.getElementById('saveStatusText').textContent = `已保存 ${savedAnswers.filter(a => a.answer?.trim()).length}/${generatedQuestions.length} 题`;
+                    document.getElementById('gradeBtn').disabled = false;
+                }
+            } catch (e) {
+                console.log('加载保存的答案失败', e);
+            }
+        }
+
+        function renderAnswerWithSaved(savedAnswers) {
+            generatedQuestions.forEach((q, idx) => {
+                const saved = savedAnswers[idx];
+                if (q.type === 'choice' && saved?.answer) {
+                    const radios = document.getElementsByName(`q${idx}`);
+                    radios.forEach(r => { if (r.value === saved.answer) r.checked = true; });
+                } else if (saved?.answer) {
+                    const ta = document.querySelector(`textarea[name="q${idx}"]`);
+                    if (ta) ta.value = saved.answer;
+                }
+            });
+        }
+
+        function collectAnswers() {
+            const answers = [];
+            generatedQuestions.forEach((q, idx) => {
+                let val = '';
+                if (q.type === 'choice') {
+                    document.getElementsByName(`q${idx}`).forEach(i => { if (i.checked) val = i.value; });
+                } else {
+                    const t = document.querySelector(`textarea[name="q${idx}"]`);
+                    if (t) val = t.value;
+                }
+                answers.push({question: q.question, answer: val});
+            });
+            return answers;
+        }
+
+        async function saveAnswers() {
+            const answers = collectAnswers();
+            const answeredCount = answers.filter(a => a.answer?.trim()).length;
+            if (answeredCount === 0) return showToast('请至少填写一道题', 'warning');
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner spinner mr-2"></i> 保存中...';
+            try {
+                const res = await fetch(`${API_BASE}/exam/save-answers`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: sessionId, questions: generatedQuestions, answers})
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    savedAnswers = answers;
+                    document.getElementById('answerSaveStatus').classList.remove('hidden');
+                    document.getElementById('saveStatusText').textContent = data.message;
+                    document.getElementById('gradeBtn').disabled = false;
+                    showToast('答案已保存', 'success');
+                } else {
+                    showToast('保存失败', 'error');
+                }
+            } catch (e) {
+                showToast('保存失败', 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> 保存答案';
+        }
+
+        async function submitGrading() {
+            const answers = collectAnswers();
+            if (answers.some(a => !a.answer?.trim())) return showToast('请完成所有题目', 'warning');
+            
+            // 如果没有保存过答案，先保存
+            if (savedAnswers.length === 0 || savedAnswers.some(a => !a.answer?.trim())) {
+                const saveRes = await fetch(`${API_BASE}/exam/save-answers`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: sessionId, questions: generatedQuestions, answers})
+                });
+                const saveData = await saveRes.json();
+                if (saveData.status === 'success') {
+                    savedAnswers = answers;
+                    document.getElementById('answerSaveStatus').classList.remove('hidden');
+                    document.getElementById('saveStatusText').textContent = saveData.message;
+                }
+            }
+            
+            const btn = document.getElementById('gradeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner spinner mr-2"></i> 批改中...';
+            try {
+                const res = await fetch(`${API_BASE}/exam/grade`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({questions: generatedQuestions, answers})
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    gradingResult = data.grading;
+                    renderGrading(data.grading);
+                    renderQuestionsWithAnswer(generatedQuestions);
+                    document.getElementById('answerSection').classList.add('hidden');
+                    document.getElementById('gradingSection').classList.remove('hidden');
+                    showToast('批改完成', 'success');
+                } else {
+                    showToast('批改失败: ' + (data.detail || ''), 'error');
+                }
+            } catch (e) {
+                showToast('批改失败: ' + e.message, 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i> 重新批改';
+        }
+
+        async function showExplanations() {
+            const answers = savedAnswers.length ? savedAnswers : collectAnswers();
+            const btn = document.getElementById('explainBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner spinner mr-2"></i> 生成解析...';
+            try {
+                const res = await fetch(`${API_BASE}/exam/explain`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({questions: generatedQuestions, answers})
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showExplanationModal(data.explanations);
+                    showToast('解析生成完成', 'success');
+                } else {
+                    showToast('生成解析失败', 'error');
+                }
+            } catch (e) {
+                showToast('生成解析失败', 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-graduation-cap mr-2"></i> 查看解析';
+        }
+
+        function showExplanationModal(explanations) {
+            const exp = explanations.explanations || explanations;
+            let html = '<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">';
+            html += '<div class="glass-panel max-w-2xl w-full max-h-[80vh] overflow-y-auto rounded-xl p-6">';
+            html += '<div class="flex justify-between items-center mb-4"><h3 class="text-xl font-semibold text-violet-300">📖 AI详细解析</h3>';
+            html += '<button onclick="document.getElementById(\'explainModal\').remove()" class="text-slate-400 hover:text-white text-2xl">&times;</button></div>';
+            html += '<div class="space-y-4">';
+            exp.forEach((e, i) => {
+                html += `<div class="p-4 rounded-lg bg-white/5 border border-violet-500/30">
+                    <div class="font-medium text-violet-300 mb-2">第${i+1}题</div>
+                    <div class="text-sm text-slate-300 mb-2">${e.question}</div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div class="p-2 rounded bg-red-500/10"><span class="text-red-400">正确答案：</span>${e.correct_answer}</div>
+                        <div class="p-2 rounded bg-blue-500/10"><span class="text-blue-400">你的答案：</span>${e.student_answer}</div>
+                    </div>
+                    <div class="p-3 rounded bg-violet-500/10 mb-2"><span class="text-violet-400 font-medium">详细解析：</span>${e.analysis}</div>
+                    <div class="text-sm text-slate-400"><span class="text-amber-400">关键要点：</span>${(e.key_points || []).join('、')}</div>
+                    ${e.related_knowledge ? `<div class="text-sm text-slate-400 mt-1"><span class="text-green-400">相关知识点：</span>${e.related_knowledge}</div>` : ''}
+                </div>`;
+            });
+            html += '</div></div></div>';
+            html = html.replace('class="fixed', 'id="explainModal" class="fixed');
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+
+        function renderGrading(g) {
+            const details = g.details || g.results || [];
+            const c = g.percentage >= 60 ? 'text-green-400' : 'text-red-400';
+            let html = `<div class="flex justify-between items-center mb-6 p-4 glass-panel rounded-xl">
+                <div><div class="text-sm text-slate-400">总分</div><div class="text-3xl font-bold ${c}">${g.total_score}/${g.max_total}</div></div>
+                <div class="text-right"><div class="text-sm text-slate-400">正确率</div><div class="text-3xl font-bold ${c}">${g.percentage}%</div></div>
+            </div><div class="space-y-3">`;
+            
+            details.forEach((r, i) => {
+                const q = generatedQuestions[i];
+                const qType = q ? q.type : 'choice';
+                const isChoice = qType === 'choice' || qType === 'multiple' || qType === 'true_false';
+                const isCorrect = r.is_correct !== undefined ? r.is_correct : (r.score === r.max_score);
+                const resultClass = isChoice ? (isCorrect ? 'correct' : 'wrong') : 'border-l-4 border-blue-500';
+                const statusBadge = isChoice
+                    ? `<span class="px-2 py-1 rounded text-xs ${isCorrect ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${isCorrect ? '正确' : '错误'}</span>`
+                    : `<span class="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">主观题</span>`;
+                    
+                let typeLabel = '';
+                if (qType === 'choice' || qType === 'single_choice') typeLabel = '(单选题)';
+                else if (qType === 'multiple_choice' || qType === 'multiple') typeLabel = '(多选题)';
+                else if (qType === 'true_false' || qType === 'judge') typeLabel = '(判断题)';
+                else if (qType === 'fill_blank' || qType === 'fill') typeLabel = '(填空题)';
+                else if (qType === 'short') typeLabel = '(简答题)';
+                else if (qType === 'essay' || qType === '论述') typeLabel = '(论述题)';
+                
+                html += `<div class="glass-panel p-4 rounded-xl ${resultClass}">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium">第${r.question_id || i+1}题 ${typeLabel}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm ${r.score === r.max_score ? 'text-green-400' : 'text-yellow-400'}">${r.score}/${r.max_score}</span>
+                            ${statusBadge}
+                        </div>
+                    </div>`;
+                if (q && qType !== 'choice' && qType !== 'multiple') {
+                    html += `<div class="text-sm text-slate-300 mb-2">${q.question || q.text || ''}</div>`;
+                }
+                html += `<div class="text-xs text-slate-400 mb-1">你的答案：${r.student_answer || '未作答'}</div>`;
+                if (r.correct_answer) html += `<div class="text-xs text-green-400 font-semibold"><i class="fa-solid fa-key mr-1"></i>参考答案：${r.correct_answer}</div>`;
+                if (r.analysis) html += `<div class="text-xs text-blue-400 mt-1"><i class="fa-solid fa-comment mr-1"></i>${r.analysis}</div>`;
+                if (r.total_comment) html += `<div class="text-xs text-purple-400 mt-1"><i class="fa-solid fa-star mr-1"></i>评语：${r.total_comment}</div>`;
+                if (r.suggestions && r.suggestions.length > 0) html += `<div class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-lightbulb mr-1"></i>建议：${r.suggestions.join('；')}</div>`;
+                html += '</div>';
+            });
+            html += '</div>';
+            
+            // 薄弱知识点汇总
+            if (g.weakness_summary) {
+                html += `<div class="mt-4 glass-panel p-4 rounded-xl border-l-4 border-orange-500">
+                    <div class="font-semibold text-orange-300 mb-2"><i class="fa-solid fa-triangle-exclamation mr-2"></i>薄弱知识点</div>
+                    <p class="text-sm text-slate-300">${g.weakness_summary}</p>
+                </div>`;
+            }
+            
+            // 改进建议
+            if (g.improvement_suggestions && g.improvement_suggestions.length > 0) {
+                html += `<div class="mt-4 glass-panel p-4 rounded-xl">
+                    <div class="font-semibold text-violet-300 mb-2"><i class="fa-solid fa-graduation-cap mr-2"></i>提升建议</div>
+                    <ul class="text-sm text-slate-300 space-y-1">`;
+                g.improvement_suggestions.forEach(s => {
+                    html += `<li><i class="fa-solid fa-check text-emerald-400 mr-2"></i>${s}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // 总体评价
+            if (g.summary) html += `<div class="mt-4 glass-panel p-4 rounded-xl"><div class="font-semibold text-violet-300 mb-2">总体评价</div><p class="text-sm">${g.summary}</p></div>`;
+            
+            document.getElementById('gradingResult').innerHTML = html;
+        }
+
+        function resetExam() {
+            document.getElementById('answerSection').classList.remove('hidden');
+            document.getElementById('gradingSection').classList.add('hidden');
+            renderQuestions(generatedQuestions);
+            document.querySelectorAll('input[type="radio"]').forEach(i => i.checked = false);
+            document.querySelectorAll('textarea').forEach(t => t.value = '');
+            showToast('已重置答题页面', 'success');
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const colors = {success: 'border-emerald-500', error: 'border-red-500', warning: 'border-yellow-500'};
+            toast.children[0].className = `glass-panel text-white px-5 py-3 rounded-xl flex items-center border-l-4 ${colors[type] || colors.success}`;
+            document.getElementById('toastMsg').textContent = msg;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.transform = 'translateY(20px)'; toast.style.opacity = '0'; }, 3000);
+        }
+
+        loadFiles();
+    </script>
+</body>
+</html>

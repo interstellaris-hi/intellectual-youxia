@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+ <title>我的全栈黑客松项目</title>
+</head>
+<body>
+ <h1>前后端连通测试</h1>
+ <button onclick="testApi()">点击请求后端数据</button>
+ <p id="result" style="color: blue; font-weight: bold;"></p>
+ <script>
+ async function testApi() {
+ // 直接请求同一个域名下的 /api/hello 接口，告别恼人的跨域问题！
+ const response = await fetch('/api/hello'); 
+ const data = await response.json();
+ document.getElementById('result').innerText = "后端返回：" + data.message;
+ }
+ </script>
+</body>
+</html>

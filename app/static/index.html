@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智识游侠 · AI学习助手</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans SC', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 20s ease infinite;
+            color: #fff;
+            min-height: 100vh;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+        }
+        .feature-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        .feature-card.active {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+        .blob {
+            position: absolute;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.5;
+            animation: float 15s infinite ease-in-out;
+        }
+        .blob-1 { top: 0; left: 0; width: 500px; height: 500px; background: #7c3aed; }
+        .blob-2 { bottom: 0; right: 0; width: 600px; height: 600px; background: #db2777; animation-delay: -7s; }
+        .blob-3 { top: 50%; left: 50%; width: 400px; height: 400px; background: #059669; animation-delay: -3s; }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    </style>
+</head>
+<body class="relative min-h-screen text-slate-100">
+    <div class="blob blob-1 rounded-full"></div>
+    <div class="blob blob-2 rounded-full"></div>
+    <div class="blob blob-3 rounded-full"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="glass-panel rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-lg shadow-violet-500/30">
+                        <i class="fa-solid fa-dragon text-3xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-violet-200 to-purple-300">智识游侠</h1>
+                        <p class="text-sm text-slate-300">AI驱动的学习助手 · RAG问答系统（因档案学可查找考题资料少设计）</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="engineStatus" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-black/20 border border-white/10">
+                        <div id="engineDot" class="w-3 h-3 rounded-full bg-emerald-400 pulse"></div>
+                        <span id="engineText" class="text-sm text-emerald-400">引擎检测中...</span>
+                    </div>
+                    <button onclick="switchView('chat')" class="px-5 py-2.5 rounded-xl bg-violet-500/30 text-violet-300 font-medium hover:bg-violet-500/50 transition-all">
+                        <i class="fa-solid fa-comments mr-2"></i>AI对话
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Features Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div onclick="switchView('chat')" class="feature-card glass-panel rounded-xl p-5 text-center border border-white/10">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-brain text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg">智能问答</h3>
+                <p class="text-xs text-slate-400 mt-1">基于教材的精准问答</p>
+            </div>
+            <div onclick="goToExam()" class="feature-card glass-panel rounded-xl p-5 text-center border border-white/10">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg">考试中心</h3>
+                <p class="text-xs text-slate-400 mt-1">生成考题智能批改</p>
+            </div>
+            <div onclick="switchView('admin')" class="feature-card glass-panel rounded-xl p-5 text-center border border-white/10">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-database text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg">知识库</h3>
+                <p class="text-xs text-slate-400 mt-1">管理教材与向量库</p>
+            </div>
+            <div onclick="showHelp()" class="feature-card glass-panel rounded-xl p-5 text-center border border-white/10">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-circle-question text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-lg">使用帮助</h3>
+                <p class="text-xs text-slate-400 mt-1">快速入门指南</p>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="glass-panel rounded-2xl p-6 min-h-[600px]">
+            <!-- Chat View -->
+            <div id="view-chat" class="view-panel">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold flex items-center">
+                        <i class="fa-solid fa-comments mr-2 text-violet-400"></i>AI对话助手
+                    </h2>
+                    <select id="namespaceSelect" class="bg-black/30 border border-white/10 text-sm rounded-lg px-3 py-2 outline-none">
+                        <option value="GLOBAL_SEARCH">🌟 全局搜索</option>
+                    </select>
+                </div>
+                <div id="chatHistory" class="h-[400px] overflow-y-auto mb-4 space-y-4 pr-2">
+                    <div id="chatPlaceholder" class="text-center text-slate-400 py-20">
+                        <i class="fa-solid fa-robot text-5xl mb-4 opacity-30"></i>
+                        <p class="text-lg">你好！我是智识游侠 (*´▽`*)ﾉ</p>
+                        <p class="text-sm mt-2 text-slate-500">请先在知识库页面上传并入库教材，然后开始提问</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 relative">
+                        <div id="imagePreviewContainer" class="hidden absolute bottom-full mb-2 left-0 bg-black/50 p-2 rounded-lg">
+                            <img id="imagePreview" class="h-16 rounded">
+                            <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-rose-500 w-5 h-5 rounded-full text-xs">×</button>
+                        </div>
+                        <input type="text" id="chatInput" placeholder="向智识游侠提问..." class="w-full glass-input rounded-xl py-3 pl-4 pr-24">
+                    </div>
+                    <input type="file" id="imageInput" class="hidden" accept="image/*" onchange="handleImageSelect(event)">
+                    <button onclick="document.getElementById('imageInput').click()" class="p-3 rounded-xl bg-black/20 hover:bg-black/40 transition-all">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                    <button onclick="sendChatMessage()" class="btn-primary px-6 py-3 rounded-xl font-medium">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin View -->
+            <div id="view-admin" class="view-panel hidden">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fa-solid fa-cloud-upload mr-2 text-violet-400"></i>上传教材
+                        </h3>
+                        <div id="dropzone" class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-violet-400 transition-all">
+                            <input type="file" id="fileInput" class="hidden" accept=".md,.pdf,.docx,.pptx" multiple>
+                            <i class="fa-solid fa-file-arrow-up text-4xl text-slate-400 mb-3"></i>
+                            <p class="text-sm text-slate-300">拖拽文件到此处</p>
+                            <p class="text-xs text-slate-500 mt-1">支持 .md .pdf .docx .pptx 批量上传</p>
+                        </div>
+                        <div id="uploadProgress" class="hidden mt-4">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-emerald-400">上传中...</span>
+                                <span id="uploadPercent" class="text-slate-400">0%</span>
+                            </div>
+                            <div class="w-full bg-black/30 rounded-full h-2 overflow-hidden">
+                                <div id="progressBar" class="bg-gradient-to-r from-emerald-400 to-teal-400 h-full rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold flex items-center">
+                                <i class="fa-solid fa-layer-group mr-2 text-pink-400"></i>知识库文件
+                            </h3>
+                            <button onclick="fetchFiles()" class="text-sm text-slate-400 hover:text-white">
+                                <i class="fa-solid fa-rotate-right"></i> 刷新
+                            </button>
+                        </div>
+                        <div class="overflow-y-auto max-h-[300px]">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-slate-400 text-xs border-b border-white/10">
+                                        <th class="py-2 text-left">文件名</th>
+                                        <th class="py-2 text-center">状态</th>
+                                        <th class="py-2 text-right">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fileListBody" class="divide-y divide-white/5">
+                                    <tr><td colspan="3" class="py-8 text-center text-slate-500">加载中...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center py-6 text-slate-500 text-sm">
+            <p>智识游侠 · 基于RAG的AI学习助手 | Powered by Qwen3 & ChromaDB</p>
+            <p class="mt-1">访问地址: http://127.0.0.1:8001/admin/ 或 http://localhost:8001/admin/</p>
+        </footer>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">使用帮助</h2>
+                <button onclick="closeHelp()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4 text-sm">
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="font-semibold text-violet-300 mb-2">🚀 快速开始</h4>
+                    <ol class="list-decimal list-inside space-y-2 text-slate-300">
+                        <li>在"知识库"标签页上传您的.md教材文件</li>
+                        <li>点击文件旁边的"入库"按钮，等待向量化完成</li>
+                        <li>切换到"AI对话"开始提问</li>
+                        <li>点击"考试中心"生成考题并测试</li>
+                    </ol>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="font-semibold text-pink-300 mb-2">📸 图片提问</h4>
+                    <p class="text-slate-300">支持上传题目截图或直接粘贴图片到输入框</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <h4 class="font-semibold text-cyan-300 mb-2">🌐 访问地址</h4>
+                    <p class="text-slate-300">本地访问: <span class="text-emerald-400">http://127.0.0.1:8001/</span></p>
+                    <p class="text-slate-300">考试中心: <span class="text-emerald-400">http://127.0.0.1:8001/exam</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="glass-panel text-white px-5 py-3 rounded-xl flex items-center border-l-4 border-emerald-500">
+            <i id="toastIcon" class="fa-solid fa-circle-check text-lg mr-3"></i>
+            <span id="toastMsg">操作成功</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1/admin';
+        let currentImageBase64 = null;
+
+        function switchView(view) {
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+            document.getElementById('view-' + view).classList.remove('hidden');
+            if (view === 'admin') fetchFiles();
+        }
+
+        function goToExam() {
+            window.location.href = '/exam';
+        }
+
+        function showHelp() {
+            document.getElementById('helpModal').classList.remove('hidden');
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').classList.add('hidden');
+        }
+
+        async function detectEngine() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                const isSF = data.llm_target?.includes('siliconflow');
+                document.getElementById('engineText').textContent = isSF ? '云端API' : '本地GPU';
+            } catch {
+                document.getElementById('engineText').textContent = '引擎就绪';
+            }
+        }
+        detectEngine();
+
+        async function fetchFiles() {
+            const tbody = document.getElementById('fileListBody');
+            tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-center text-slate-500">加载中...</td></tr>';
+            try {
+                const res = await fetch(`${API_BASE}/files`);
+                const data = await res.json();
+                if (!data.files.length) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-center text-slate-500">暂无文件，请先上传.md教材</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                const select = document.getElementById('namespaceSelect');
+                select.innerHTML = '<option value="GLOBAL_SEARCH">🌟 全局搜索</option>';
+                data.files.forEach((f, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-white/5';
+                    tr.innerHTML = `<td class="py-3"><i class="fa-brands fa-markdown text-sky-400 mr-2"></i>${f.name}</td>
+                        <td class="py-3 text-center"><span class="px-2 py-1 rounded text-xs ${f.is_ingested ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">${f.is_ingested ? '已入库' : '待入库'}</span></td>
+                        <td class="py-3 text-right">
+                            <button onclick="triggerIngest('${f.name}', '${f.suggested_namespace}', ${i})" class="px-3 py-1 rounded text-xs ${f.is_ingested ? 'bg-emerald-500/20 text-emerald-400' : 'bg-violet-500 text-white'}">${f.is_ingested ? '刷新' : '入库'}</button>
+                            <button onclick="deleteFile('${f.name}')" class="px-2 py-1 text-slate-400 hover:text-red-400 ml-1">×</button>
+                        </td>`;
+                    tbody.appendChild(tr);
+                    const opt = document.createElement('option');
+                    opt.value = f.suggested_namespace;
+                    opt.textContent = `📚 ${f.suggested_namespace}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                showToast('加载失败', '无法获取文件列表', 'error');
+            }
+        }
+
+        async function triggerIngest(filename, namespace, idx) {
+            showToast('处理中', '正在向量化...', 'info');
+            try {
+                const res = await fetch(`${API_BASE}/ingest`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filename, lecture_id: namespace})
+                });
+                if (res.ok) {
+                    showToast('成功', '向量化完成', 'success');
+                    fetchFiles();
+                } else {
+                    showToast('失败', '向量化失败', 'error');
+                }
+            } catch (e) {
+                showToast('错误', '网络错误', 'error');
+            }
+        }
+
+        async function deleteFile(filename) {
+            if (!confirm(`删除 ${filename}？`)) return;
+            try {
+                await fetch(`${API_BASE}/files/${filename}`, {method: 'DELETE'});
+                showToast('成功', '已删除', 'success');
+                fetchFiles();
+            } catch (e) {
+                showToast('失败', '删除失败', 'error');
+            }
+        }
+
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropzone.addEventListener(e, ev => ev.preventDefault()));
+        ['dragenter', 'dragover'].forEach(e => dropzone.classList.add('border-violet-400', 'bg-violet-500/10'));
+        ['dragleave', 'drop'].forEach(e => dropzone.classList.remove('border-violet-400', 'bg-violet-500/10'));
+        dropzone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+        fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+        async function handleFiles(files) {
+            const valid = Array.from(files).filter(f => 
+                f.name.endsWith('.md') || f.name.endsWith('.pdf') || 
+                f.name.endsWith('.docx') || f.name.endsWith('.pptx')
+            );
+            if (!valid.length) return showToast('错误', '仅支持 .md .pdf .docx .pptx 文件', 'error');
+            document.getElementById('uploadProgress').classList.remove('hidden');
+            for (let i = 0; i < valid.length; i++) {
+                const fd = new FormData();
+                fd.append('file', valid[i]);
+                await fetch(`${API_BASE}/upload`, {method: 'POST', body: fd});
+            }
+            document.getElementById('uploadProgress').classList.add('hidden');
+            showToast('成功', `已上传 ${valid.length} 个文件`, 'success');
+            fetchFiles();
+        }
+
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                currentImageBase64 = ev.target.result.split(',')[1];
+                document.getElementById('imagePreview').src = ev.target.result;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            currentImageBase64 = null;
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        }
+
+        document.getElementById('chatInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const select = document.getElementById('namespaceSelect');
+            const question = input.value.trim();
+            if (!question && !currentImageBase64) return;
+
+            const history = document.getElementById('chatHistory');
+            document.getElementById('chatPlaceholder')?.remove();
+
+            let imageHtml = currentImageBase64 ? `<img src="data:image/png;base64,${currentImageBase64}" class="max-w-[150px] rounded mb-2">` : '';
+
+            history.innerHTML += `<div class="flex justify-end">
+                <div class="bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]">${imageHtml}${question}</div>
+            </div>`;
+
+            const msgId = 'msg-' + Date.now();
+            history.innerHTML += `<div id="${msgId}" class="flex justify-start">
+                <div class="glass-panel rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
+                    <div class="text-slate-400 text-sm"><i class="fa-solid fa-spinner spinner mr-2"></i>思考中...</div>
+                </div>
+            </div>`;
+
+            history.scrollTop = history.scrollHeight;
+            const namespace = select.value;
+            input.value = '';
+            clearImage();
+
+            try {
+                const res = await fetch(`${API_BASE}/chat/stream`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question, lecture_id: namespace, image_base64: currentImageBase64})
+                });
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullAnswer = '';
+
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, {stream: true});
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                if (data.type === 'answer') {
+                                    fullAnswer += data.content;
+                                    document.getElementById(msgId).innerHTML = `<div class="prose prose-invert prose-sm">${marked.parse(fullAnswer)}</div>`;
+                                    history.scrollTop = history.scrollHeight;
+                                }
+                            } catch {}
+                        }
+                    }
+                }
+            } catch (e) {
+                document.getElementById(msgId).innerHTML = `<div class="text-red-400">错误: ${e.message}</div>`;
+            }
+        }
+
+        function showToast(title, msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            document.getElementById('toastMsg').textContent = msg;
+            const colors = {success: 'border-emerald-500', error: 'border-red-500', info: 'border-blue-500'};
+            const icons = {success: 'fa-circle-check text-emerald-400', error: 'fa-circle-exclamation text-red-400', info: 'fa-circle-info text-blue-400'};
+            toast.children[0].className = `glass-panel text-white px-5 py-3 rounded-xl flex items-center border-l-4 ${colors[type]}`;
+            icon.className = `fa-solid ${icons[type]} text-lg mr-3`;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.transform = 'translateY(20px)';
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        fetchFiles();
+    </script>
+</body>
+</html>
