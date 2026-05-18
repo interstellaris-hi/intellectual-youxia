@@ -1,14 +1,19 @@
 {
   "builds": [
     {
+      "src": "public/",
+      "use": "@vercel/static"
+    },
+    {
       "src": "main.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/(.*\\.html)",
+      "dest": "/public/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/main.py"

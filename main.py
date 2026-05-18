@@ -1,30 +1,14 @@
 import os
-import sys
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-os.makedirs("data/chroma", exist_ok=True)
-
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
-import asyncio
 
-try:
-    from app.core.config import settings
-    from app.services.rag_engine import rag_engine
-    RAG_AVAILABLE = True
-    logger.info("RAG engine loaded successfully")
-except Exception as e:
-    logger.warning(f"RAG engine not available: {e}")
-    RAG_AVAILABLE = False
-    settings = None
-
-app = FastAPI(title="智识游侠 RAG")
+app = FastAPI(title="智识游侠")
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,7 +45,7 @@ async def root():
         </style>
     </head>
     <body>
-        <h1>🎮 智识游侠 - AI学习助手</h1>
+        <h1>智识游侠 - AI学习助手</h1>
         <div class="card">
             <p>基于 RAG + LangGraph 的智能问答系统</p>
             <textarea id="question" placeholder="请输入你的问题...">什么是机器学习？</textarea>
@@ -96,70 +80,21 @@ async def root():
     </html>
     """
 
-@app.get("/exam")
-async def exam_page():
-    html_path = os.path.join(static_dir, "exam.html")
-    if os.path.exists(html_path, "r", encoding="utf-8") as f:
-        return f.read()
-    return "<h1>考试页面</h1><p>exam.html 不存在</p>"
-
 @app.get("/health")
 def health():
-    return {"status": "ok", "rag_available": RAG_AVAILABLE}
+    return {"status": "ok", "service": "智识游侠"}
 
 @app.get("/api/hello")
 def hello():
-    return {"message": "Hello from 智识游侠 backend!", "rag": RAG_AVAILABLE}
-
-class AskRequest(BaseModel):
-    question: str
-    lecture_id: str = "GLOBAL_SEARCH"
-    image_base64: Optional[str] = None
+    return {"message": "Hello from 智识游侠 backend!"}
 
 @app.post("/api/ask")
-async def ask(request: AskRequest):
-    if not RAG_AVAILABLE:
-        return {"answer": "RAG 服务暂不可用，请检查环境配置", "error": "RAG not available"}
-    
-    try:
-        logger.info(f"Received question: {request.question[:50]}...")
-        answer = await rag_engine.get_answer(
-            question=request.question,
-            lecture_id=request.lecture_id,
-            image_base64=request.image_base64
-        )
-        return {"answer": answer}
-    except Exception as e:
-        logger.error(f"Error in ask: {e}")
-        return {"answer": f"处理出错: {str(e)}", "error": str(e)}
-
-@app.get("/api/ask/stream")
-async def ask_stream(q: str, lecture_id: str = "GLOBAL_SEARCH"):
-    if not RAG_AVAILABLE:
-        return {"answer": "RAG 服务暂不可用"}
-    
-    async def event_generator():
-        try:
-            async for chunk in rag_engine.get_answer_stream(question=q, lecture_id=lecture_id):
-                yield chunk
-        except Exception as e:
-            logger.error(f"Stream error: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
-    
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-@app.get("/api/check/{lecture_id}")
-def check_lecture(lecture_id: str):
-    if not RAG_AVAILABLE:
-        return {"ingested": False, "chunks": []}
-    
-    try:
-        ingested = rag_engine.check_ingested(lecture_id)
-        chunks = rag_engine.get_namespace_chunks(lecture_id) if ingested else []
-        return {"ingested": ingested, "chunks": len(chunks)}
-    except Exception as e:
-        return {"ingested": False, "error": str(e)}
-
-import json
+async def ask(request: dict):
+    question = request.get("question", "")
+    lecture_id = request.get("lecture_id", "GLOBAL_SEARCH")
+    return {
+        "answer": f"收到问题: {question}\n\n注意: 当前为演示版本，RAG 后端服务尚未部署。请在本地启动完整服务后使用。",
+        "sources": []
+    }
 
 handler = app
