@@ -20,7 +20,8 @@
     }
   ],
   "env": {
-    "PYTHONPATH": "."
+    "PYTHONPATH": ".",
+    "API": "@api_key"
   },
   "framework": null,
   "installCommand": "pip install -r requirements.txt"

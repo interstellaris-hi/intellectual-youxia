@@ -1,5 +1,6 @@
 import os
 import logging
+import httpx
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -7,6 +8,9 @@ logger = logging.getLogger(__name__)
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+API_KEY = os.environ.get("API", "")
+API_BASE = os.environ.get("API_BASE", "https://api.openai.com/v1")
 
 app = FastAPI(title="智识游侠")
 
@@ -92,9 +96,31 @@ def hello():
 async def ask(request: dict):
     question = request.get("question", "")
     lecture_id = request.get("lecture_id", "GLOBAL_SEARCH")
-    return {
-        "answer": f"收到问题: {question}\n\n注意: 当前为演示版本，RAG 后端服务尚未部署。请在本地启动完整服务后使用。",
-        "sources": []
-    }
+    
+    if not API_KEY:
+        return {"answer": "错误: 未配置 API Key", "sources": []}
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{API_BASE}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-3.5-turbo",
+                    "messages": [
+                        {"role": "system", "content": "你是一个智能学习助手，专门帮助用户解答问题。"},
+                        {"role": "user", "content": question}
+                    ],
+                    "max_tokens": 500
+                }
+            )
+            result = response.json()
+            answer = result.get("choices", [{}])[0].get("message", {}).get("content", "无响应")
+            return {"answer": answer, "sources": []}
+    except Exception as e:
+        return {"answer": f"请求失败: {str(e)}", "sources": []}
 
 handler = app
